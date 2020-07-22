@@ -1,6 +1,5 @@
-const { create, getUsers, getUsersByUserId, updateUser, deleteUser, getUserByUserEmail } = require('./user.service')
-const { genSaltSync, hashSync, compareSync } = require('bcrypt')
-const { sign } = require('jsonwebtoken')
+const { create, getUsers, getUsersByUserId, updateUser, deleteUser, getExcelOfRecords } = require('./user.service')
+const { genSaltSync, hashSync } = require('bcrypt')
 
 module.exports = {
     createUser: (req, res) => {
@@ -92,35 +91,19 @@ module.exports = {
             })
         })  
     },
-    login: (req, res) => {
-        const body = req.body
-        getUserByUserEmail(body.email, (err, results) => {
+    getExcelOfRecords: (req, res) => {
+        getExcelOfRecords((err, results) => {
             if (err) {
                 console.log(err)
+                return
             }
-            if(!results) {
-                return res.json({
-                    success: 0,
-                    message: "Invalid Email or Password."
-                })
-            }
-            const result = compareSync(body.password, results.password)
-            if (result) {
-                results.password = undefined
-                const jsonToken = sign({result: results}, process.env.SECRET_KEY , {
-                    expiresIn: '1h'
-                })
-                return res.json({
-                    success: 1,
-                    message: "Logged in successfully.",
-                    token: jsonToken
-                })
-            } else {
-                return res.json({
-                    success: 0,
-                    message: "Invalid Email or Password."
-                })
-            }
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', 'attachment; filename=' + 'users.xlsx');
+      
+            return results.xlsx.write(res)
+                  .then(function() {
+                    res.status(200).end();
+                  });
         })
     }
 }
